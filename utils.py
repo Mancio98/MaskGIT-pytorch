@@ -32,7 +32,7 @@ class ImagePaths(Dataset):
         image = np.array(image).astype(np.uint8)
         image = self.preprocessor(image=image)["image"]
         image = (image / 127.5 - 1.0).astype(np.float32)
-        image = image.transpose(2, 0, 1)
+        image = image.transpose(2, 0, 1) #did this because pytorch wants channels as first dim, while PIL as last
         return image
 
     def __getitem__(self, i):

@@ -55,6 +55,8 @@ class VQGANTransformer(nn.Module):
         # logits = self.transformer(z_indices, mask)
 
         _, z_indices = self.encode_to_z(x)
+
+        # sos = start of sentence
         sos_tokens = torch.ones(x.shape[0], 1, dtype=torch.long, device=z_indices.device) * self.sos_token
 
         r = math.floor(self.gamma(np.random.uniform()) * z_indices.shape[1])
@@ -79,11 +81,14 @@ class VQGANTransformer(nn.Module):
         return logits, target
 
     def top_k_logits(self, logits, k):
-        v, ix = torch.topk(logits, k)
+        v, ix = torch.topk(logits, k) #return higher k values 
         out = logits.clone()
         if k == 0:
             out[:, :] = self.sos_token
         else:
+            # out < v[..., [-1]] return true if elem in out is smaller than 
+            # last elem on last axis of v (smaller of top k).
+            # It replace sos_token for all non top k elems
             out[out < v[..., [-1]]] = self.sos_token
         return out
 
@@ -136,8 +141,11 @@ class VQGANTransformer(nn.Module):
                 (inputs, torch.zeros((inputs.shape[0], N - inputs.shape[1]), device="cuda", dtype=torch.int).fill_(self.mask_token_id)))
 
         sos_tokens = torch.ones(inputs.shape[0], 1, dtype=torch.long, device=inputs.device) * self.sos_token
+
+        #concatenate the sos token with input img
         inputs = torch.cat((sos_tokens, inputs), dim=1)
 
+        # number of token masked
         unknown_number_in_the_beginning = torch.sum(inputs == self.mask_token_id, dim=-1)
         gamma = self.gamma_func(mode)
         cur_ids = inputs  # [8, 257]
@@ -152,9 +160,12 @@ class VQGANTransformer(nn.Module):
             mask_ratio = gamma(ratio)
 
             probs = F.softmax(logits, dim=-1)  # convert logits into probs [8, 257, 1024]
-            selected_probs = torch.squeeze(torch.take_along_dim(probs, torch.unsqueeze(sampled_ids, -1), -1), -1)  # get probability for selected tokens in categorical call, also for already sampled ones [8, 257]
 
-            selected_probs = torch.where(unknown_map, selected_probs, _CONFIDENCE_OF_KNOWN_TOKENS)  # ignore tokens which are already sampled [8, 257]
+            # get probability for selected tokens in categorical call, also for already sampled ones [8, 257]
+            selected_probs = torch.squeeze(torch.take_along_dim(probs, torch.unsqueeze(sampled_ids, -1), -1), -1)  
+
+            # ignore tokens which are already sampled [8, 257]
+            selected_probs = torch.where(unknown_map, selected_probs, _CONFIDENCE_OF_KNOWN_TOKENS)  
 
             mask_len = torch.unsqueeze(torch.floor(unknown_number_in_the_beginning * mask_ratio), 1)  # floor(256 * 0.99) = 254 --> [254, 254, 254, 254, ....]
             mask_len = torch.maximum(torch.zeros_like(mask_len), torch.minimum(torch.sum(unknown_map, dim=-1, keepdim=True)-1, mask_len))  # add -1 later when conditioning and also ones_like. Zeroes just because we have no cond token
@@ -171,6 +182,12 @@ class VQGANTransformer(nn.Module):
 
     @torch.no_grad()
     def log_images(self, x, mode="cosine"):
+        """
+        Helps us investigating the quality of the model. The outcome will be a
+        dictionary which contains the input image, the reconstruction of input image
+        (which isn't using the tranformer)m the half of input image (cut off bottom half and let the tranformer
+        to sample it) and the new sample
+        """
         log = dict()
 
         _, z_indices = self.encode_to_z(x)

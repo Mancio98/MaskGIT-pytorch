@@ -49,7 +49,7 @@ def get_ckpt_path(name, root, check=False):
         assert md5 == MD5_MAP[name], md5
     return path
 
-
+# perceptual loss
 class LPIPS(nn.Module):
     def __init__(self):
         super(LPIPS, self).__init__()
@@ -74,6 +74,8 @@ class LPIPS(nn.Module):
         self.load_state_dict(torch.load(ckpt, map_location=torch.device("cpu")), strict=False)
 
     def forward(self, real_x, fake_x):
+
+        # fit both real and fake imgs
         features_real = self.feature_net(self.scaling_layer(real_x))
         features_fake = self.feature_net(self.scaling_layer(fake_x))
         diffs = {}
@@ -82,6 +84,7 @@ class LPIPS(nn.Module):
         for i in range(len(self.channels)):
             diffs[i] = (norm_tensor(features_real[i]) - norm_tensor(features_fake[i])) ** 2
 
+        # return a scalar -> the sum of avg of all diffs
         return sum([spatial_average(self.lins[i].model(diffs[i])) for i in range(len(self.channels))])
 
 

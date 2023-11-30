@@ -16,8 +16,10 @@ class ResidualBlock(nn.Module):
             Swish(),
             nn.Conv2d(out_channels, out_channels, 3, 1, 1)
         )
+
+        #controllare con l'originale
         if in_channels != out_channels:
-            self.channel_up = nn.Conv2d(in_channels, out_channels, 1, 1, 0)
+            self.channel_up = nn.Conv2d(in_channels, out_channels, 1, 1, 0) # Conv2D 1x1 
 
     def forward(self, x):
         if self.in_channels != self.out_channels:

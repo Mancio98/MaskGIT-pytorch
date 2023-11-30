@@ -10,7 +10,7 @@ class Decoder(nn.Module):
         num_resolutions = len(ch_mult)
         block_in = ch_mult[num_resolutions-1]
         curr_res = 256 // 2**(num_resolutions-1)
-
+        num_res_blocks = 3
         layers = [nn.Conv2d(args.latent_dim, block_in, kernel_size=3, stride=1, padding=1),
                   ResidualBlock(block_in, block_in),
                   NonLocalBlock(block_in),
@@ -19,7 +19,7 @@ class Decoder(nn.Module):
 
         for i in reversed(range(num_resolutions)):
             block_out = ch_mult[i]
-            for i_block in range(3):
+            for i_block in range(num_res_blocks):
                 layers.append(ResidualBlock(block_in, block_out))
                 block_in = block_out
                 if curr_res in attn_resolutions:

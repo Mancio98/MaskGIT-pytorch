@@ -8,15 +8,15 @@ from torchvision import utils as vutils
 from discriminator import Discriminator
 from lpips import LPIPS
 from utils import load_data, weights_init
-from vqgan import VQGAN
+from vq_f16 import VQModel
 
 
 class TrainVQGAN:
     def __init__(self, args):
-        self.vqgan = VQGAN(args)
+        self.vqgan = VQModel(args)
         self.discriminator = Discriminator(args).to(device=args.device)
         self.discriminator.apply(weights_init)
-        self.perceptual_loss = LPIPS().eval().to(device=args.device)
+        self.perceptual_loss = LPIPS().eval().to(device=args.device) #set in eval mode
         self.opt_vq, self.opt_disc = self.configure_optimizers(args)
 
         self.prepare_training()
@@ -53,16 +53,17 @@ class TrainVQGAN:
                     disc_fake = self.discriminator(decoded_images)
 
                     disc_factor = self.vqgan.adopt_weight(args.disc_factor, epoch * steps_one_epoch + i,
-                                                          threshold=args.disc_start)
+                                                          threshold=args.disc_start) # pass as args by user
                     perceptual_loss = self.perceptual_loss(imgs, decoded_images)
-                    rec_loss = torch.abs(imgs - decoded_images)
+                    rec_loss = torch.abs(imgs - decoded_images) # just use L1 loss (da rivedere)
                     nll_loss = args.perceptual_loss_factor * perceptual_loss + args.l2_loss_factor * rec_loss
                     nll_losss = nll_loss.mean()
-                    g_loss = -torch.mean(disc_fake)
+                    gan_loss = -torch.mean(disc_fake)
 
-                    λ = self.vqgan.calculate_lambda(nll_losss, g_loss)
-                    loss_vq = nll_losss + q_loss + disc_factor * λ * g_loss
+                    λ = self.vqgan.calculate_lambda(nll_losss, gan_loss)
+                    loss_vq = nll_losss + q_loss + disc_factor * λ * gan_loss # disc_factor help to not take account discr loss until pass the threshold
 
+                    # hinge loss (SVM), will affect the discriminator
                     d_loss_real = torch.mean(F.relu(1. - disc_real))
                     d_loss_fake = torch.mean(F.relu(1. + disc_fake))
                     loss_gan = disc_factor * .5 * (d_loss_real + d_loss_fake)

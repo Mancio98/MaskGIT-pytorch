@@ -109,6 +109,10 @@ class BidirectionalTransformer(nn.Module):
         self.num_image_tokens = args.num_image_tokens
         self.tok_emb = nn.Embedding(args.num_codebook_vectors + 2, args.dim)
         # self.pos_emb = PositionalEmbedding(args.dim, self.num_image_tokens + 1)
+
+        # trunc_normal: https://pytorch.org/docs/stable/nn.init.html#torch.nn.init.trunc_normal_
+        # Parameter: https://pytorch.org/docs/stable/generated/torch.nn.parameter.Parameter.html#torch.nn.parameter.Parameter
+
         self.pos_emb = nn.init.trunc_normal_(nn.Parameter(torch.zeros(self.num_image_tokens + 1, args.dim)), 0., 0.02)
         # self.register_buffer("pos_emb", nn.init.trunc_normal_(nn.Parameter(torch.zeros(1024, args.dim)), 0., 0.02))
         self.blocks = nn.Sequential(*[Encoder(args.dim, args.hidden_dim) for _ in range(args.n_layers)])
