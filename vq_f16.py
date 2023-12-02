@@ -5,16 +5,16 @@ from vq_modules import VectorQuantizer2 as VectorQuantizer
 from codebook import Codebook
 
 class VQModel(nn.Module):
-    def __init__(self, args, ckpt_path=None):
+    def __init__(self, device, ckpt_path=None):
         super().__init__()
         ddconfig = {'double_z': False, 'z_channels': 256, 'resolution': 256, 'in_channels': 3, 'out_ch': 3, 'ch': 128, 'ch_mult': [1, 1, 2, 2, 4], 'num_res_blocks': 2, 'attn_resolutions': [16], 'dropout': 0.0}
         embed_dim = 256
         n_embed = 1024
-        self.encoder = Encoder(**ddconfig).to(device=args.device)
-        self.decoder = Decoder(**ddconfig).to(device=args.device)
-        self.quantize = VectorQuantizer(n_embed, embed_dim, beta=0.25).to(device=args.device)
-        self.quant_conv = torch.nn.Conv2d(ddconfig["z_channels"], embed_dim, 1).to(device=args.device)
-        self.post_quant_conv = torch.nn.Conv2d(embed_dim, ddconfig["z_channels"], 1).to(device=args.device)
+        self.encoder = Encoder(**ddconfig).to(device=device)
+        self.decoder = Decoder(**ddconfig).to(device=device)
+        self.quantize = VectorQuantizer(n_embed, embed_dim, beta=0.25).to(device=device)
+        self.quant_conv = torch.nn.Conv2d(ddconfig["z_channels"], embed_dim, 1).to(device=device)
+        self.post_quant_conv = torch.nn.Conv2d(embed_dim, ddconfig["z_channels"], 1).to(device=device)
         if ckpt_path is not None:
             self.init_from_ckpt(ckpt_path)
 
