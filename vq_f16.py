@@ -15,8 +15,8 @@ class VQModel(nn.Module):
         self.quantize = VectorQuantizer(n_embed, embed_dim, beta=0.25).to(device=device)
         self.quant_conv = torch.nn.Conv2d(ddconfig["z_channels"], embed_dim, 1).to(device=device)
         self.post_quant_conv = torch.nn.Conv2d(embed_dim, ddconfig["z_channels"], 1).to(device=device)
-        if ckpt_path is not None:
-            self.init_from_ckpt(ckpt_path)
+        # if ckpt_path is not None:
+        #     self.init_from_ckpt(ckpt_path)
 
     def init_from_ckpt(self, path):
         sd = torch.load(path, map_location="cpu")
