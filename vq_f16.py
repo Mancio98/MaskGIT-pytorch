@@ -43,6 +43,25 @@ class VQModel(nn.Module):
         quant, diff, _ = self.encode(input)
         dec = self.decode(quant)
         return dec, diff
+    
+    # lambda factor to weight the VQ_VAE loss and GAN loss (see the paper)
+    def calculate_lambda(self, nll_loss, gan_loss):
+        #nll_loss = perceptual reconstruction loss
+        #gan_loss = gan_loss
+
+        #its calculate on last layers
+        last_layer = self.decoder.model[-1]
+        last_layer_weight = last_layer.weight
+
+        # torch.autograd.grad calculate the gradient, retain_graph means we want to keep the curren
+        # computational graph which is just important that the backward pass can function properly
+        nll_grads = torch.autograd.grad(nll_loss, last_layer_weight, retain_graph=True)[0] 
+        g_grads = torch.autograd.grad(gan_loss, last_layer_weight, retain_graph=True)[0]
+
+        # λ is a ratio
+        λ = torch.norm(nll_grads) / (torch.norm(g_grads) + 1e-4)
+        λ = torch.clamp(λ, 0, 1e4).detach() # clipping the values to be between 0 and 10k
+        return 0.8 * λ
 
 
 # RuDalle image pos embeddings

@@ -39,7 +39,7 @@ class TrainVQGAN:
         opt_disc = torch.optim.Adam(self.discriminator.parameters(),
                                     lr=lr, eps=1e-08, betas=(args.beta1, args.beta2))
         return opt_vq, opt_disc
-
+    
     def train(self, args):
         train_dataset = load_data(args)
         steps_one_epoch = len(train_dataset)
