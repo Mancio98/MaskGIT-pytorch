@@ -62,6 +62,12 @@ class VQModel(nn.Module):
         λ = torch.norm(nll_grads) / (torch.norm(g_grads) + 1e-4)
         λ = torch.clamp(λ, 0, 1e4).detach() # clipping the values to be between 0 and 10k
         return 0.8 * λ
+    
+    @staticmethod
+    def adopt_weight(disc_factor, i, threshold, value=0.):
+        if i < threshold:
+            disc_factor = value
+        return disc_factor
 
 
 # RuDalle image pos embeddings
